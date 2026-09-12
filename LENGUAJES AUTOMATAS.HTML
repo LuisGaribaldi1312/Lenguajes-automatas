@@ -1,0 +1,1053 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Laboratorio de Compiladores — Lenguajes y Autómatas</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600;700&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#10152A;
+    --surface:#1A2140;
+    --surface-2:#222B52;
+    --border:#303B66;
+    --text:#EDEFF7;
+    --muted:#98A2C7;
+    --amber:#F2B84B;
+    --amber-dim:#7A5F27;
+    --teal:#4FD1C5;
+    --rose:#E5646E;
+    --mono:'IBM Plex Mono', monospace;
+    --sans:'IBM Plex Sans', sans-serif;
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;}
+  body{
+    background:var(--bg);
+    color:var(--text);
+    font-family:var(--sans);
+    min-height:100vh;
+    line-height:1.55;
+  }
+  #app{min-height:100vh;}
+  a{color:var(--amber);}
+  button{
+    font-family:var(--mono);
+    cursor:pointer;
+    border:1px solid var(--border);
+    background:var(--surface-2);
+    color:var(--text);
+    padding:10px 16px;
+    font-size:13px;
+    letter-spacing:.02em;
+    transition:border-color .15s ease, color .15s ease;
+  }
+  button:hover{border-color:var(--amber);}
+  button:disabled{opacity:.4;cursor:not-allowed;}
+  button.primary{
+    background:var(--amber);
+    color:#181205;
+    border-color:var(--amber);
+    font-weight:600;
+  }
+  button.primary:hover{filter:brightness(1.08);}
+  button.ghost{background:transparent;}
+  button.danger{border-color:var(--rose);color:var(--rose);background:transparent;}
+  input, textarea, select{
+    font-family:var(--sans);
+    background:var(--surface-2);
+    border:1px solid var(--border);
+    color:var(--text);
+    padding:10px 12px;
+    font-size:14px;
+    width:100%;
+    border-radius:2px;
+  }
+  textarea{font-family:var(--mono);font-size:13px;min-height:110px;resize:vertical;line-height:1.5;}
+  input:focus, textarea:focus, select:focus{outline:2px solid var(--amber);outline-offset:1px;border-color:var(--amber);}
+  label{display:block;font-size:12px;color:var(--muted);margin-bottom:6px;font-family:var(--mono);}
+  h1,h2,h3,h4{font-family:var(--mono);font-weight:600;margin:0 0 8px 0;letter-spacing:-0.01em;}
+  p{margin:0 0 12px 0;color:var(--text);}
+  .muted{color:var(--muted);}
+  .mono{font-family:var(--mono);}
+  .hidden{display:none !important;}
+
+  /* ---------- AUTH SCREEN ---------- */
+  .auth-wrap{
+    min-height:100vh;
+    display:grid;
+    grid-template-columns: 1.1fr 1fr;
+  }
+  @media (max-width: 860px){ .auth-wrap{grid-template-columns:1fr;} .auth-hero{display:none;} }
+  .auth-hero{
+    background:
+      linear-gradient(180deg, rgba(16,21,42,.4), rgba(16,21,42,.92)),
+      repeating-linear-gradient(115deg, #161c38 0px, #161c38 2px, #10152A 2px, #10152A 46px);
+    padding:64px 56px;
+    display:flex;
+    flex-direction:column;
+    justify-content:space-between;
+    border-right:1px solid var(--border);
+  }
+  .hero-tag{font-family:var(--mono);color:var(--amber);font-size:13px;margin-bottom:22px;}
+  .hero-title{font-family:var(--mono);font-size:38px;line-height:1.15;max-width:520px;margin:0 0 18px 0;}
+  .hero-sub{color:var(--muted);max-width:440px;font-size:15px;}
+  .term{
+    font-family:var(--mono);
+    font-size:13px;
+    background:var(--surface);
+    border:1px solid var(--border);
+    padding:18px 20px;
+    max-width:480px;
+    color:#B9C2E8;
+  }
+  .term .ln{margin-bottom:5px;}
+  .term .ok{color:var(--teal);}
+  .term .cur{color:var(--amber);}
+  .auth-form-side{display:flex;align-items:center;justify-content:center;padding:40px 24px;}
+  .auth-card{width:100%;max-width:400px;}
+  .auth-tabs{display:flex;gap:0;margin-bottom:28px;border-bottom:1px solid var(--border);}
+  .auth-tab{
+    font-family:var(--mono);
+    background:none;border:none;color:var(--muted);
+    padding:10px 4px;margin-right:24px;font-size:14px;
+    border-bottom:2px solid transparent;
+  }
+  .auth-tab.active{color:var(--text);border-bottom-color:var(--amber);}
+  .field{margin-bottom:16px;}
+  .err{color:var(--rose);font-size:13px;margin:10px 0 0 0;font-family:var(--mono);}
+  .ok-msg{color:var(--teal);font-size:13px;margin:10px 0 0 0;font-family:var(--mono);}
+
+  /* ---------- APP SHELL ---------- */
+  .shell{display:grid;grid-template-columns:300px 1fr;min-height:100vh;}
+  @media (max-width:820px){.shell{grid-template-columns:1fr;} .sidebar{display:none;} .sidebar.open{display:block;position:fixed;inset:0;z-index:50;overflow:auto;}}
+  .sidebar{
+    background:var(--surface);
+    border-right:1px solid var(--border);
+    padding:22px 0 40px 0;
+    overflow-y:auto;
+  }
+  .side-head{padding:0 22px 18px 22px;border-bottom:1px solid var(--border);margin-bottom:14px;}
+  .brand{font-family:var(--mono);font-size:13px;color:var(--amber);}
+  .userline{font-size:13px;color:var(--muted);margin-top:6px;}
+  .unit-block{margin-bottom:6px;}
+  .unit-label{
+    font-family:var(--mono);
+    font-size:11px;
+    color:var(--muted);
+    padding:14px 22px 6px 22px;
+    letter-spacing:.03em;
+  }
+  .level-row{
+    display:flex;align-items:center;gap:10px;
+    padding:9px 22px;
+    cursor:pointer;
+    border-left:2px solid transparent;
+    font-size:13px;
+  }
+  .level-row:hover{background:var(--surface-2);}
+  .level-row.active{background:var(--surface-2);border-left-color:var(--amber);}
+  .lvl-dot{width:9px;height:9px;border-radius:50%;flex:0 0 auto;}
+  .dot-locked{background:#3a4270;}
+  .dot-unlocked{background:var(--amber);}
+  .dot-submitted{background:var(--muted);}
+  .dot-graded{background:var(--teal);}
+  .level-code{font-family:var(--mono);color:var(--muted);font-size:12px;min-width:34px;}
+  .main{padding:32px 40px 60px 40px;max-width:900px;}
+  @media (max-width:820px){.main{padding:20px;}}
+  .topbar{display:flex;justify-content:space-between;align-items:center;margin-bottom:28px;gap:12px;flex-wrap:wrap;}
+  .pill{
+    display:inline-flex;align-items:center;gap:6px;
+    font-family:var(--mono);font-size:12px;
+    border:1px solid var(--border);
+    padding:5px 10px;color:var(--muted);
+  }
+  .pill.amber{color:var(--amber);border-color:var(--amber-dim);}
+  .pill.teal{color:var(--teal);border-color:#215a54;}
+
+  .exercise-card{
+    border:1px solid var(--border);
+    background:var(--surface);
+    padding:22px 24px;
+    margin-bottom:20px;
+  }
+  .exercise-head{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:10px;}
+  .exercise-type{font-family:var(--mono);font-size:11px;color:var(--amber);text-transform:uppercase;letter-spacing:.04em;}
+  .grade-badge{font-family:var(--mono);font-size:13px;color:var(--teal);}
+  .feedback-box{
+    margin-top:12px;padding:12px 14px;
+    background:var(--surface-2);
+    border-left:2px solid var(--teal);
+    font-size:13px;color:#CFEAE6;
+  }
+  .locked-note{color:var(--muted);font-family:var(--mono);font-size:13px;}
+
+  table{width:100%;border-collapse:collapse;font-size:13px;}
+  th,td{text-align:left;padding:10px 12px;border-bottom:1px solid var(--border);}
+  th{font-family:var(--mono);color:var(--muted);font-weight:500;font-size:11px;text-transform:uppercase;letter-spacing:.03em;}
+  tr.clickable{cursor:pointer;}
+  tr.clickable:hover{background:var(--surface-2);}
+
+  .stat-row{display:flex;gap:14px;flex-wrap:wrap;margin-bottom:24px;}
+  .stat-card{border:1px solid var(--border);background:var(--surface);padding:16px 20px;min-width:130px;}
+  .stat-num{font-family:var(--mono);font-size:26px;color:var(--amber);}
+  .stat-lbl{font-size:12px;color:var(--muted);margin-top:4px;}
+
+  .msg-item{border:1px solid var(--border);background:var(--surface);padding:12px 14px;margin-bottom:10px;font-size:13px;}
+  .msg-date{font-family:var(--mono);font-size:11px;color:var(--muted);margin-bottom:4px;}
+  .back-link{font-family:var(--mono);font-size:13px;color:var(--muted);cursor:pointer;margin-bottom:18px;display:inline-block;}
+  .back-link:hover{color:var(--amber);}
+  .grade-row{display:flex;gap:10px;align-items:flex-end;margin-top:14px;flex-wrap:wrap;}
+  .grade-row .field{flex:1;min-width:160px;margin-bottom:0;}
+  .score-input{width:80px !important;}
+  .save-note{font-family:var(--mono);font-size:12px;color:var(--teal);margin-left:10px;}
+  .toast{
+    position:fixed;bottom:20px;right:20px;
+    background:var(--surface-2);border:1px solid var(--teal);
+    color:var(--teal);padding:12px 18px;font-family:var(--mono);font-size:13px;
+    z-index:200;
+  }
+  .mobile-topbar{display:none;}
+  @media (max-width:820px){
+    .mobile-topbar{display:flex;justify-content:space-between;align-items:center;padding:14px 20px;border-bottom:1px solid var(--border);background:var(--surface);}
+  }
+</style>
+</head>
+<body>
+<div id="app"></div>
+
+<script>
+/* ============================= CURRÍCULA ============================= */
+const CURRICULUM = [
+  { unit:"UNIDAD 1", unitTitle:"Análisis semántico", topics:[
+    {code:"1.1", title:"Árboles de expresiones", exs:[
+      {type:"Teoría", prompt:"Explica qué es un árbol de expresión (árbol sintáctico anotado semánticamente) y qué información almacena un nodo hoja frente a un nodo interno."},
+      {type:"Práctica", prompt:"Construye el árbol de expresión para (a + b) * (c - d) / e. Represéntalo con paréntesis anidados o indentación y explica el orden de evaluación."}
+    ]},
+    {code:"1.2", title:"Acciones semánticas de un analizador sintáctico", exs:[
+      {type:"Teoría", prompt:"¿Qué es una acción semántica y en qué momento del análisis sintáctico se ejecuta? Da un ejemplo de una producción con una acción semántica embebida { ... }."},
+      {type:"Práctica", prompt:"Para la producción E → E1 + T, escribe la acción semántica que calcule E.val a partir de E1.val y T.val usando atributos sintetizados."}
+    ]},
+    {code:"1.3", title:"Comprobación de tipos en expresiones", exs:[
+      {type:"Teoría", prompt:"Explica la diferencia entre una coerción implícita de tipos y un error de tipos, y cómo decide un compilador si dos operandos son compatibles."},
+      {type:"Práctica", prompt:"Dada la expresión x(int) + y(float) * z(int), indica qué conversiones de tipo se generan y cuál es el tipo resultante final."}
+    ]},
+    {code:"1.4", title:"Pila semántica en un analizador sintáctico", exs:[
+      {type:"Teoría", prompt:"¿Para qué sirve la pila semántica y cómo se mantiene sincronizada con la pila del analizador sintáctico (por ejemplo, uno LR)?"},
+      {type:"Práctica", prompt:"Simula paso a paso el contenido de la pila semántica al reducir la cadena id + id * id con una gramática de expresiones con precedencia de operadores."}
+    ]},
+    {code:"1.5", title:"Esquema de traducción", exs:[
+      {type:"Teoría", prompt:"Define qué es un esquema de traducción dirigido por la sintaxis (SDT) y en qué se diferencia de una gramática atribuida."},
+      {type:"Práctica", prompt:"Escribe el esquema de traducción para convertir una instrucción if-then-else en cuádruplos con etiquetas de salto."}
+    ]},
+    {code:"1.6", title:"Generación de la tabla de símbolos y direcciones", exs:[
+      {type:"Teoría", prompt:"¿Qué campos típicos contiene una entrada de la tabla de símbolos (nombre, tipo, ámbito, dirección, tamaño)? Explica brevemente cada uno."},
+      {type:"Práctica", prompt:"Para el bloque { int a; float b; char c; }, genera la tabla de símbolos asignando direcciones consecutivas según el tamaño de cada tipo (int=4, float=4, char=1)."}
+    ]},
+    {code:"1.7", title:"Manejo de errores semánticos", exs:[
+      {type:"Teoría", prompt:"Menciona tres tipos de errores semánticos (no sintácticos) y cómo se detectan al recorrer el árbol de expresión."},
+      {type:"Práctica", prompt:"Detecta y describe los errores semánticos en: int x; x = \"hola\"; y = x + z;  (y, z no declaradas)."}
+    ]}
+  ]},
+  { unit:"UNIDAD 2", unitTitle:"Generación de código intermedio", topics:[
+    {code:"2.1.1", title:"Notación prefija", exs:[
+      {type:"Teoría", prompt:"Explica cómo se recorre un árbol de expresión (preorden) para obtener su notación prefija."},
+      {type:"Práctica", prompt:"Convierte a notación prefija la expresión infija: (a + b) * (c - d)."}
+    ]},
+    {code:"2.1.2", title:"Notación infija", exs:[
+      {type:"Teoría", prompt:"¿Por qué la notación infija necesita paréntesis y reglas de precedencia para no ser ambigua?"},
+      {type:"Práctica", prompt:"Dada la expresión postfija a b + c d - *, escribe su forma infija totalmente parentizada."}
+    ]},
+    {code:"2.1.3", title:"Notación postfija", exs:[
+      {type:"Teoría", prompt:"Explica el algoritmo, usando una pila, para evaluar una expresión escrita en notación postfija."},
+      {type:"Práctica", prompt:"Convierte a notación postfija: a + b * (c - d) / e."}
+    ]},
+    {code:"2.2.1", title:"Notación Polaca", exs:[
+      {type:"Teoría", prompt:"¿Qué relación hay entre la notación polaca de Łukasiewicz y la notación prefija? ¿Se evalúan de la misma manera?"},
+      {type:"Práctica", prompt:"Evalúa, mostrando cada paso de la pila, la expresión en notación polaca: * + 3 4 - 5 2"}
+    ]},
+    {code:"2.2.2", title:"Código P", exs:[
+      {type:"Teoría", prompt:"Describe qué es el código P (pseudocódigo de pila, como el usado por Pascal-P) y por qué es un código intermedio portable."},
+      {type:"Práctica", prompt:"Genera el código P (instrucciones tipo LOD, LIT, ADD, STO) para la asignación x = a + b * 2."}
+    ]},
+    {code:"2.2.3", title:"Triplos", exs:[
+      {type:"Teoría", prompt:"Explica la estructura de un triplo (operador, operando1, operando2) y cómo se referencian los resultados intermedios (por posición)."},
+      {type:"Práctica", prompt:"Genera los triplos para: x = (a + b) * (c - d)."}
+    ]},
+    {code:"2.2.4", title:"Cuádruplos", exs:[
+      {type:"Teoría", prompt:"¿En qué se diferencia un cuádruplo de un triplo? ¿Qué ventaja da usar una variable temporal explícita?"},
+      {type:"Práctica", prompt:"Genera los cuádruplos para x = (a + b) * (c - d), usando temporales T1, T2, etc."}
+    ]},
+    {code:"2.3.1", title:"Variables y constantes", exs:[
+      {type:"Teoría", prompt:"¿Cómo distingue el generador de código intermedio entre una referencia a variable y una constante literal al construir cuádruplos?"},
+      {type:"Práctica", prompt:"Genera el código intermedio (cuádruplos) para: area = 3.1416 * r * r."}
+    ]},
+    {code:"2.3.2", title:"Expresiones", exs:[
+      {type:"Teoría", prompt:"Describe cómo se respeta la precedencia y asociatividad de operadores al generar código intermedio para expresiones aritméticas y lógicas."},
+      {type:"Práctica", prompt:"Genera los cuádruplos para: a < b AND c >= d."}
+    ]},
+    {code:"2.3.3", title:"Instrucción de asignación", exs:[
+      {type:"Teoría", prompt:"¿Qué cuádruplo especial se usa para representar la asignación final del resultado a la variable destino?"},
+      {type:"Práctica", prompt:"Genera el código intermedio completo para: total = (precio * cantidad) - descuento."}
+    ]},
+    {code:"2.3.4", title:"Instrucciones de control", exs:[
+      {type:"Teoría", prompt:"Explica cómo se generan etiquetas y saltos condicionales/incondicionales para un ciclo while."},
+      {type:"Práctica", prompt:"Genera el código intermedio (cuádruplos con etiquetas) para: while (i < n) { i = i + 1; }"}
+    ]},
+    {code:"2.3.5", title:"Funciones", exs:[
+      {type:"Teoría", prompt:"¿Qué cuádruplos especiales se usan para representar el paso de parámetros y la llamada a una función (PARAM, CALL)?"},
+      {type:"Práctica", prompt:"Genera el código intermedio para la llamada: resultado = suma(a, b, 5)."}
+    ]},
+    {code:"2.3.6", title:"Estructuras", exs:[
+      {type:"Teoría", prompt:"¿Cómo se calcula el desplazamiento (offset) de un campo dentro de una estructura al generar código intermedio para un acceso como persona.edad?"},
+      {type:"Práctica", prompt:"Dado struct Persona { int edad; float sueldo; }, genera el código intermedio para: p.sueldo = p.sueldo + 500."}
+    ]}
+  ]},
+  { unit:"UNIDAD 3", unitTitle:"Optimización", topics:[
+    {code:"3.1.1", title:"Optimización local", exs:[
+      {type:"Teoría", prompt:"Explica en qué consiste la optimización local y menciona dos técnicas aplicadas dentro de un solo bloque básico."},
+      {type:"Práctica", prompt:"Optimiza eliminando subexpresiones comunes: t1 = a + b; t2 = a + b; t3 = t1 * t2;"}
+    ]},
+    {code:"3.1.2", title:"Optimización de ciclos", exs:[
+      {type:"Teoría", prompt:"¿Qué es el código invariante en el ciclo (loop-invariant code motion) y por qué moverlo fuera del ciclo mejora el rendimiento?"},
+      {type:"Práctica", prompt:"Optimiza: for (i=0;i<n;i++){ x = a*b; y[i] = x + i; } identificando y moviendo el código invariante fuera del ciclo."}
+    ]},
+    {code:"3.1.3", title:"Optimización global", exs:[
+      {type:"Teoría", prompt:"Explica la diferencia entre optimización local (un bloque básico) y optimización global (todo el flujo de un procedimiento)."},
+      {type:"Práctica", prompt:"En un grafo de flujo con 3 bloques básicos donde una variable se calcula igual en dos caminos distintos, describe cómo la optimización global eliminaría el cálculo redundante."}
+    ]},
+    {code:"3.1.4", title:"Optimización de mirilla", exs:[
+      {type:"Teoría", prompt:"Describe la técnica de optimización de mirilla (peephole) y menciona un patrón típico que elimina."},
+      {type:"Práctica", prompt:"Optimiza por mirilla: MOV R1, a; MOV a, R1;  Identifica y elimina la instrucción redundante y justifica."}
+    ]},
+    {code:"3.2.1", title:"Costo de ejecución", exs:[
+      {type:"Teoría", prompt:"Explica qué factores conforman el costo de ejecución de un programa: uso de memoria, registros y pilas."},
+      {type:"Práctica", prompt:"Compara el costo de evaluar a+b+c+d con y sin reutilización de un registro acumulador (en accesos a memoria vs. uso de registros)."}
+    ]},
+    {code:"3.2.2", title:"Criterios para mejorar el código", exs:[
+      {type:"Teoría", prompt:"Menciona tres criterios generales que un compilador debe balancear al optimizar (velocidad, tamaño de código, uso de memoria)."},
+      {type:"Práctica", prompt:"Dado x = y * 2, propone una transformación de fortalecimiento de operadores (strength reduction) y explica por qué es más eficiente."}
+    ]},
+    {code:"3.2.3", title:"Herramientas para el análisis del flujo de datos", exs:[
+      {type:"Teoría", prompt:"¿Qué es un grafo de flujo de control (CFG) y para qué se usa en el análisis de flujo de datos?"},
+      {type:"Práctica", prompt:"Dibuja en texto el grafo de flujo de control para: if (a>b) { x=1; } else { x=2; } y=x+1; señalando bloques básicos y aristas."}
+    ]}
+  ]},
+  { unit:"UNIDAD 4", unitTitle:"Generación de código objeto", topics:[
+    {code:"4.1", title:"Registros", exs:[
+      {type:"Teoría", prompt:"Explica qué es la asignación de registros y por qué es un recurso limitado que el compilador debe administrar cuidadosamente."},
+      {type:"Práctica", prompt:"Dado t1=a+b; t2=t1*c; t3=t2-d, asigna registros R1 y R2 reutilizándolos cuando un temporal ya no se necesite."}
+    ]},
+    {code:"4.2", title:"Lenguaje ensamblador", exs:[
+      {type:"Teoría", prompt:"¿Qué es el lenguaje ensamblador y qué relación uno a uno guarda con el lenguaje máquina?"},
+      {type:"Práctica", prompt:"Traduce a pseudo-ensamblador (LOAD, ADD, STORE) el código: t1 = a + b; x = t1 * 2."}
+    ]},
+    {code:"4.3", title:"Lenguaje máquina", exs:[
+      {type:"Teoría", prompt:"Explica la estructura general de una instrucción en lenguaje máquina (código de operación + operandos) con un ejemplo hipotético."},
+      {type:"Práctica", prompt:"Dada la instrucción ensamblador ADD R1, R2, codifícala en un formato binario hipotético de 16 bits que tú definas (opcode + registros)."}
+    ]},
+    {code:"4.4", title:"Administración de memoria", exs:[
+      {type:"Teoría", prompt:"Describe las diferencias entre asignación de memoria estática, en pila (stack) y dinámica (heap) durante la generación de código objeto."},
+      {type:"Práctica", prompt:"Para una función con 2 variables locales y 1 parámetro, dibuja el marco de pila (stack frame) indicando el orden y desplazamientos típicos."}
+    ]}
+  ]}
+];
+
+// aplanar a niveles
+const LEVELS = [];
+CURRICULUM.forEach(u=>{
+  u.topics.forEach(t=>{
+    LEVELS.push({ id: LEVELS.length, unit:u.unit, unitTitle:u.unitTitle, code:t.code, title:t.title, exs:t.exs });
+  });
+});
+const TOTAL_LEVELS = LEVELS.length;
+const TOTAL_EXS = LEVELS.reduce((a,l)=>a+l.exs.length,0);
+
+const ADMIN_USER = "Ing. Luis Alberto Garibaldi Leciwr";
+const ADMIN_PASS = "";
+
+/* ============================= STORAGE HELPERS ============================= */
+const LS_PREFIX = "labcompiladores_v1::";
+function hasNativeStorage(){
+  try{
+    return typeof window.storage !== "undefined" && window.storage && typeof window.storage.get === "function";
+  }catch(e){ return false; }
+}
+let STORAGE_MODE = hasNativeStorage() ? "shared" : "local";
+
+async function sGet(key){
+  if(hasNativeStorage()){
+    try{
+      const r = await window.storage.get(key, true);
+      return r ? JSON.parse(r.value) : null;
+    }catch(e){
+      return null;
+    }
+  }
+  try{
+    const raw = localStorage.getItem(LS_PREFIX+key);
+    return raw ? JSON.parse(raw) : null;
+  }catch(e){ return null; }
+}
+async function sSet(key, val){
+  if(hasNativeStorage()){
+    try{
+      const res = await window.storage.set(key, JSON.stringify(val), true);
+      return res;
+    }catch(e){ return null; }
+  }
+  try{
+    localStorage.setItem(LS_PREFIX+key, JSON.stringify(val));
+    return {key, value: JSON.stringify(val)};
+  }catch(e){ return null; }
+}
+async function sListKeys(prefix){
+  if(hasNativeStorage()){
+    try{
+      const r = await window.storage.list(prefix, true);
+      return r ? r.keys : [];
+    }catch(e){ return []; }
+  }
+  try{
+    const keys = [];
+    for(let i=0;i<localStorage.length;i++){
+      const k = localStorage.key(i);
+      if(k && k.indexOf(LS_PREFIX) === 0){
+        const realKey = k.substring(LS_PREFIX.length);
+        if(realKey.indexOf(prefix) === 0) keys.push(realKey);
+      }
+    }
+    return keys;
+  }catch(e){ return []; }
+}
+
+function emptyProgress(){
+  const levels = {};
+  LEVELS.forEach((lv,i)=>{
+    levels[lv.id] = { status: i===0 ? "unlocked" : "locked", answers:{}, scores:{} };
+  });
+  return { levels };
+}
+
+let STORAGE_AVAILABLE = true;
+async function ensureAdmin(){
+  try{
+    const existing = await sGet("user:"+ADMIN_USER);
+    if(!existing){
+      await sSet("user:"+ADMIN_USER, {username:ADMIN_USER, password:ADMIN_PASS, name:"Administrador", role:"admin"});
+    }
+  }catch(e){
+    // no-op: sGet/sSet already have their own fallbacks and never throw
+  }
+}
+function normalizeUsername(u){
+  return (u||"").trim().toLowerCase();
+}
+function isValidUsername(u){
+  return /^[a-z0-9_.\-]{3,20}$/.test(u);
+}
+
+/* ============================= APP STATE ============================= */
+let state = {
+  screen: "auth",       // auth | student | admin
+  authTab: "login",     // login | register
+  authError: "",
+  authOk: "",
+  currentUser: null,    // {username,name,role}
+  progress: null,       // for student
+  messages: [],         // for student
+  selectedLevel: 0,
+  studentView: "levels", // levels | messages
+  // admin
+  studentsList: [],     // [{username,name}]
+  selectedStudent: null,
+  selectedStudentProgress: null,
+  adminMsgDraft: "",
+  saveNote: "",
+  sidebarOpen: false,
+};
+
+function levelStatus(progress, levelId){
+  return progress.levels[levelId] ? progress.levels[levelId].status : "locked";
+}
+
+function computeStudentStats(progress){
+  let gradedCount = 0, scoreSum = 0, completedLevels = 0;
+  LEVELS.forEach(lv=>{
+    const L = progress.levels[lv.id];
+    if(!L) return;
+    if(L.status === "submitted" || L.status === "graded") completedLevels++;
+    lv.exs.forEach((ex,i)=>{
+      const sc = L.scores[i];
+      if(sc && typeof sc.score === "number"){
+        gradedCount++; scoreSum += sc.score;
+      }
+    });
+  });
+  const avg = gradedCount>0 ? (scoreSum/gradedCount) : null;
+  return { completedLevels, gradedCount, totalExs: TOTAL_EXS, avg };
+}
+
+/* ============================= RENDER ROOT ============================= */
+async function render(){
+  const app = document.getElementById("app");
+  if(state.screen === "auth"){
+    app.innerHTML = renderAuth();
+    attachAuthHandlers();
+    return;
+  }
+  if(state.screen === "student"){
+    app.innerHTML = renderStudentShell();
+    attachStudentHandlers();
+    return;
+  }
+  if(state.screen === "admin"){
+    app.innerHTML = renderAdminShell();
+    attachAdminHandlers();
+    return;
+  }
+}
+
+/* ============================= AUTH SCREEN ============================= */
+function renderAuth(){
+  const isLogin = state.authTab === "login";
+  const storageWarning = STORAGE_MODE === "local" ? `
+    <div style="max-width:400px;margin:0 auto 18px auto;border:1px solid var(--amber-dim);background:rgba(242,184,75,.08);padding:12px 14px;font-family:var(--mono);font-size:12px;color:var(--amber);">
+      ⚠ Guardando en este navegador (modo local). Los datos no se comparten automáticamente con otras computadoras. Para que tú y tus alumnos vean el mismo progreso, abran la app desde el mismo enlace de Claude.
+    </div>` : "";
+  return `
+  <div class="auth-wrap">
+    <div class="auth-hero">
+      <div>
+        <div class="hero-tag">// lenguajes y autómatas · admin: ${ADMIN_USER} / ${ADMIN_PASS}</div>
+        <h1 class="hero-title">Laboratorio de Compiladores</h1>
+        <p class="hero-sub">Practica análisis semántico, generación de código intermedio, optimización y generación de código objeto — un tema a la vez, en orden, hasta dominar el curso.</p>
+      </div>
+      <div class="term">
+        <div class="ln">$ etapa <span class="ok">análisis_semántico</span> ..... completa</div>
+        <div class="ln">$ etapa <span class="cur">código_intermedio</span> ..... en progreso</div>
+        <div class="ln">$ etapa optimización ..... bloqueada</div>
+        <div class="ln">$ etapa código_objeto ..... bloqueada</div>
+      </div>
+    </div>
+    <div class="auth-form-side">
+      <div class="auth-card">
+        ${storageWarning}
+        <div class="auth-tabs">
+          <button class="auth-tab ${isLogin?'active':''}" data-tab="login">Iniciar sesión</button>
+          <button class="auth-tab ${!isLogin?'active':''}" data-tab="register">Registrarse</button>
+        </div>
+        ${isLogin ? `
+          <form id="loginForm">
+            <div class="field"><label>Usuario</label><input type="text" id="loginUser" autocomplete="username" required></div>
+            <div class="field"><label>Contraseña</label><input type="password" id="loginPass" autocomplete="current-password" required></div>
+            <button type="submit" class="primary" style="width:100%">Entrar</button>
+            ${state.authError ? `<p class="err">${state.authError}</p>` : ""}
+          </form>
+        ` : `
+          <form id="registerForm">
+            <div class="field"><label>Nombre completo</label><input type="text" id="regName" required></div>
+            <div class="field"><label>Usuario (sin espacios, ej: jperez)</label><input type="text" id="regUser" required pattern="[a-zA-Z0-9_.\-]{3,20}" title="3-20 caracteres: letras, números, punto, guion o guion bajo"></div>
+            <div class="field"><label>Contraseña</label><input type="password" id="regPass" required></div>
+            <button type="submit" class="primary" style="width:100%">Crear cuenta</button>
+            ${state.authError ? `<p class="err">${state.authError}</p>` : ""}
+            ${state.authOk ? `<p class="ok-msg">${state.authOk}</p>` : ""}
+          </form>
+        `}
+      </div>
+    </div>
+  </div>`;
+}
+
+function attachAuthHandlers(){
+  document.querySelectorAll(".auth-tab").forEach(btn=>{
+    btn.addEventListener("click", ()=>{
+      state.authTab = btn.dataset.tab;
+      state.authError=""; state.authOk="";
+      render();
+    });
+  });
+  const loginForm = document.getElementById("loginForm");
+  if(loginForm){
+    loginForm.addEventListener("submit", async (e)=>{
+      e.preventDefault();
+      const uRaw = document.getElementById("loginUser").value;
+      const p = document.getElementById("loginPass").value;
+      const u = normalizeUsername(uRaw);
+      const rec = await sGet("user:"+u);
+      if(!rec || rec.password !== p){
+        state.authError = "Usuario o contraseña incorrectos.";
+        render();
+        return;
+      }
+      state.currentUser = {username:rec.username, name:rec.name, role:rec.role};
+      state.authError = "";
+      if(rec.role === "admin"){
+        await loadAdminData();
+        state.screen = "admin";
+      } else {
+        await loadStudentData();
+        state.screen = "student";
+      }
+      render();
+    });
+  }
+  const regForm = document.getElementById("registerForm");
+  if(regForm){
+    regForm.addEventListener("submit", async (e)=>{
+      e.preventDefault();
+      state.authOk = "";
+      const name = document.getElementById("regName").value.trim();
+      const uRaw = document.getElementById("regUser").value;
+      const p = document.getElementById("regPass").value;
+      const u = normalizeUsername(uRaw);
+      if(!name || !uRaw || !p){ state.authError="Completa todos los campos."; render(); return; }
+      if(!isValidUsername(u)){
+        state.authError = "El usuario debe tener 3-20 caracteres: solo letras, números, punto, guion o guion bajo (sin espacios ni acentos).";
+        render();
+        return;
+      }
+      if(u === ADMIN_USER){ state.authError="Ese usuario no está disponible."; render(); return; }
+      let existing;
+      try{ existing = await sGet("user:"+u); }catch(e){ existing = null; }
+      if(existing){ state.authError="Ese usuario ya existe."; render(); return; }
+      const saveUser = await sSet("user:"+u, {username:u, password:p, name:name, role:"student"});
+      const saveProg = await sSet("progress:"+u, emptyProgress());
+      if(!saveUser || !saveProg){
+        state.authError = "No se pudo crear la cuenta. Intenta de nuevo en unos segundos.";
+        render();
+        return;
+      }
+      state.authError = "";
+      state.authOk = "Cuenta creada correctamente con el usuario \"" + u + "\". Ahora inicia sesión.";
+      state.authTab = "login";
+      render();
+    });
+  }
+}
+
+/* ============================= STUDENT ============================= */
+async function loadStudentData(){
+  const u = state.currentUser.username;
+  let prog = await sGet("progress:"+u);
+  if(!prog){ prog = emptyProgress(); await sSet("progress:"+u, prog); }
+  state.progress = prog;
+  const msgs = await sGet("messages:"+u);
+  state.messages = msgs || [];
+  state.selectedLevel = 0;
+  state.studentView = "levels";
+}
+
+function renderStudentShell(){
+  const prog = state.progress;
+  const stats = computeStudentStats(prog);
+  const unreadCount = state.messages.length;
+
+  let sidebarHtml = `<div class="side-head">
+      <div class="brand">// lab de compiladores</div>
+      <div class="userline">${escapeHtml(state.currentUser.name)}</div>
+    </div>`;
+  CURRICULUM.forEach(u=>{
+    sidebarHtml += `<div class="unit-block"><div class="unit-label">${u.unit} — ${u.unitTitle}</div>`;
+    LEVELS.filter(lv=>lv.unit===u.unit).forEach(lv=>{
+      const st = levelStatus(prog, lv.id);
+      const dotClass = st==="locked" ? "dot-locked" : st==="unlocked" ? "dot-unlocked" : st==="submitted" ? "dot-submitted" : "dot-graded";
+      const active = (state.studentView==="levels" && state.selectedLevel===lv.id) ? "active" : "";
+      sidebarHtml += `<div class="level-row ${active}" data-level="${lv.id}">
+        <span class="lvl-dot ${dotClass}"></span>
+        <span class="level-code">${lv.code}</span>
+        <span>${escapeHtml(lv.title)}</span>
+      </div>`;
+    });
+    sidebarHtml += `</div>`;
+  });
+  sidebarHtml += `<div class="level-row ${state.studentView==='messages'?'active':''}" id="msgNav" style="margin-top:16px;border-top:1px solid var(--border);padding-top:14px;">
+      <span class="lvl-dot" style="background:var(--amber);"></span>
+      <span>Mensajes${unreadCount?` (${unreadCount})`:''}</span>
+    </div>
+    <div class="level-row" id="logoutBtnSide"><span class="lvl-dot" style="background:var(--rose);"></span><span>Cerrar sesión</span></div>`;
+
+  let mainHtml = "";
+  if(state.studentView === "messages"){
+    mainHtml = renderStudentMessages();
+  } else {
+    mainHtml = renderStudentLevel(prog, stats);
+  }
+
+  return `
+  <div class="mobile-topbar">
+    <button class="ghost" id="hamburger">☰ temas</button>
+    <span class="mono muted">${escapeHtml(state.currentUser.name)}</span>
+  </div>
+  <div class="shell">
+    <div class="sidebar ${state.sidebarOpen?'open':''}" id="sidebar">${sidebarHtml}</div>
+    <div class="main">${mainHtml}</div>
+  </div>`;
+}
+
+function renderStudentLevel(prog, stats){
+  const lv = LEVELS[state.selectedLevel];
+  const st = levelStatus(prog, lv.id);
+  const L = prog.levels[lv.id];
+
+  let exsHtml = "";
+  if(st === "locked"){
+    exsHtml = `<p class="locked-note">🔒 Este tema se desbloquea al completar el anterior.</p>`;
+  } else {
+    lv.exs.forEach((ex,i)=>{
+      const savedAnswer = (L.answers[i] || "");
+      const sc = L.scores[i];
+      const readOnly = (st === "submitted" || st === "graded");
+      exsHtml += `
+      <div class="exercise-card">
+        <div class="exercise-head">
+          <span class="exercise-type">${ex.type}</span>
+          ${sc && typeof sc.score==="number" ? `<span class="grade-badge">Calificación: ${sc.score}/10</span>` : ""}
+        </div>
+        <p>${escapeHtml(ex.prompt)}</p>
+        <textarea data-exidx="${i}" ${readOnly?'readonly':''} placeholder="Escribe tu respuesta o desarrollo aquí...">${escapeHtml(savedAnswer)}</textarea>
+        ${sc && sc.feedback ? `<div class="feedback-box"><strong>Retroalimentación del profesor:</strong><br>${escapeHtml(sc.feedback)}</div>` : ""}
+      </div>`;
+    });
+  }
+
+  let actionHtml = "";
+  if(st === "unlocked"){
+    actionHtml = `<button class="primary" id="submitLevelBtn">Entregar tema ${lv.code}</button>`;
+  } else if(st === "submitted"){
+    actionHtml = `<span class="pill">Entregado — esperando calificación</span>`;
+  } else if(st === "graded"){
+    actionHtml = `<span class="pill teal">Calificado</span>`;
+  }
+
+  return `
+    <div class="topbar">
+      <div>
+        <h2>${lv.code} · ${escapeHtml(lv.title)}</h2>
+        <span class="muted mono" style="font-size:12px;">${lv.unit} — ${lv.unitTitle}</span>
+      </div>
+      <div class="pill amber">Nivel ${lv.id+1} / ${TOTAL_LEVELS}</div>
+    </div>
+    <div class="stat-row">
+      <div class="stat-card"><div class="stat-num">${stats.completedLevels}/${TOTAL_LEVELS}</div><div class="stat-lbl">Temas entregados</div></div>
+      <div class="stat-card"><div class="stat-num">${stats.avg!==null? stats.avg.toFixed(1) : "—"}</div><div class="stat-lbl">Promedio actual</div></div>
+      <div class="stat-card"><div class="stat-num">${stats.gradedCount}/${stats.totalExs}</div><div class="stat-lbl">Ejercicios calificados</div></div>
+    </div>
+    ${exsHtml}
+    <div style="margin-top:20px;">${actionHtml}</div>
+  `;
+}
+
+function renderStudentMessages(){
+  let list = "";
+  if(state.messages.length === 0){
+    list = `<p class="muted">Aún no tienes mensajes del profesor.</p>`;
+  } else {
+    [...state.messages].reverse().forEach(m=>{
+      list += `<div class="msg-item"><div class="msg-date">${escapeHtml(m.date)}</div>${escapeHtml(m.text)}</div>`;
+    });
+  }
+  return `<h2>Mensajes del profesor</h2>${list}`;
+}
+
+function attachStudentHandlers(){
+  const hamburger = document.getElementById("hamburger");
+  if(hamburger) hamburger.addEventListener("click", ()=>{ state.sidebarOpen = !state.sidebarOpen; render(); });
+
+  document.querySelectorAll(".level-row[data-level]").forEach(row=>{
+    row.addEventListener("click", ()=>{
+      state.selectedLevel = parseInt(row.dataset.level,10);
+      state.studentView = "levels";
+      state.sidebarOpen = false;
+      render();
+    });
+  });
+  const msgNav = document.getElementById("msgNav");
+  if(msgNav) msgNav.addEventListener("click", ()=>{ state.studentView="messages"; state.sidebarOpen=false; render(); });
+
+  const logoutSide = document.getElementById("logoutBtnSide");
+  if(logoutSide) logoutSide.addEventListener("click", doLogout);
+
+  const submitBtn = document.getElementById("submitLevelBtn");
+  if(submitBtn){
+    submitBtn.addEventListener("click", async ()=>{
+      const lv = LEVELS[state.selectedLevel];
+      const textareas = document.querySelectorAll("textarea[data-exidx]");
+      const answers = {};
+      let allFilled = true;
+      textareas.forEach(ta=>{
+        const idx = ta.dataset.exidx;
+        const val = ta.value.trim();
+        if(!val) allFilled = false;
+        answers[idx] = val;
+      });
+      if(!allFilled){
+        alert("Responde ambos ejercicios antes de entregar el tema.");
+        return;
+      }
+      const prog = state.progress;
+      prog.levels[lv.id].answers = answers;
+      prog.levels[lv.id].status = "submitted";
+      const nextId = lv.id + 1;
+      if(prog.levels[nextId] && prog.levels[nextId].status === "locked"){
+        prog.levels[nextId].status = "unlocked";
+      }
+      await sSet("progress:"+state.currentUser.username, prog);
+      render();
+    });
+  }
+}
+
+async function doLogout(){
+  state.currentUser = null;
+  state.progress = null;
+  state.messages = [];
+  state.selectedLevel = 0;
+  state.screen = "auth";
+  state.authTab = "login";
+  state.authError = ""; state.authOk="";
+  render();
+}
+
+/* ============================= ADMIN ============================= */
+async function loadAdminData(){
+  const keys = await sListKeys("user:");
+  const students = [];
+  for(const k of keys){
+    const rec = await sGet(k);
+    if(rec && rec.role === "student"){
+      students.push({username:rec.username, name:rec.name});
+    }
+  }
+  students.sort((a,b)=>a.name.localeCompare(b.name));
+  state.studentsList = students;
+  state.selectedStudent = null;
+  state.selectedStudentProgress = null;
+}
+
+function renderAdminShell(){
+  let mainHtml = "";
+  if(!state.selectedStudent){
+    mainHtml = renderAdminOverview();
+  } else {
+    mainHtml = renderAdminStudentDetail();
+  }
+  return `
+  <div class="mobile-topbar">
+    <span class="mono muted">Panel administrador</span>
+    <button class="ghost" id="logoutBtnTop">Salir</button>
+  </div>
+  <div class="shell" style="grid-template-columns:1fr;">
+    <div class="main" style="max-width:1100px;">
+      <div class="topbar">
+        <div>
+          <h2>Panel del administrador</h2>
+          <span class="muted mono" style="font-size:12px;">${escapeHtml(state.currentUser.name)}</span>
+        </div>
+        <button class="ghost" id="logoutBtnAdmin">Cerrar sesión</button>
+      </div>
+      ${mainHtml}
+    </div>
+  </div>`;
+}
+
+function renderAdminOverview(){
+  if(state.studentsList.length === 0){
+    return `<p class="muted">Todavía no hay alumnos registrados.</p>`;
+  }
+  let rows = "";
+  state._studentStatsCache = state._studentStatsCache || {};
+  return `<div id="adminTableWrap"><p class="muted">Cargando estadísticas de alumnos…</p></div>`;
+}
+
+async function renderAdminOverviewAsync(){
+  const wrap = document.getElementById("adminTableWrap");
+  if(!wrap) return;
+  let rows = "";
+  for(const s of state.studentsList){
+    const prog = await sGet("progress:"+s.username);
+    const p = prog || emptyProgress();
+    const stats = computeStudentStats(p);
+    rows += `<tr class="clickable" data-username="${escapeHtml(s.username)}">
+      <td>${escapeHtml(s.name)}</td>
+      <td class="mono muted">${escapeHtml(s.username)}</td>
+      <td>${stats.completedLevels}/${TOTAL_LEVELS}</td>
+      <td>${stats.gradedCount}/${stats.totalExs}</td>
+      <td>${stats.avg!==null?stats.avg.toFixed(1):"—"}</td>
+    </tr>`;
+  }
+  wrap.innerHTML = `<table>
+    <thead><tr><th>Alumno</th><th>Usuario</th><th>Temas entregados</th><th>Ejercicios calificados</th><th>Promedio</th></tr></thead>
+    <tbody>${rows}</tbody>
+  </table>`;
+  wrap.querySelectorAll("tr[data-username]").forEach(tr=>{
+    tr.addEventListener("click", async ()=>{
+      state.selectedStudent = tr.dataset.username;
+      await openStudentDetail();
+      render();
+    });
+  });
+}
+
+async function openStudentDetail(){
+  const prog = await sGet("progress:"+state.selectedStudent);
+  state.selectedStudentProgress = prog || emptyProgress();
+  const msgs = await sGet("messages:"+state.selectedStudent);
+  state.selectedStudentMessages = msgs || [];
+}
+
+function renderAdminStudentDetail(){
+  const info = state.studentsList.find(s=>s.username===state.selectedStudent);
+  const prog = state.selectedStudentProgress;
+  const stats = computeStudentStats(prog);
+
+  let levelsHtml = "";
+  LEVELS.forEach(lv=>{
+    const L = prog.levels[lv.id];
+    const st = L.status;
+    if(st === "locked") return; // no mostrar temas que ni siquiera ha desbloqueado
+    let exsHtml = "";
+    lv.exs.forEach((ex,i)=>{
+      const answer = L.answers[i] || "";
+      const sc = L.scores[i] || {};
+      exsHtml += `
+      <div class="exercise-card">
+        <div class="exercise-head">
+          <span class="exercise-type">${ex.type}</span>
+        </div>
+        <p class="muted" style="font-size:13px;">${escapeHtml(ex.prompt)}</p>
+        <div style="background:var(--surface-2);border:1px solid var(--border);padding:10px 12px;font-family:var(--mono);font-size:13px;white-space:pre-wrap;margin-bottom:12px;">${answer? escapeHtml(answer) : '<span class="muted">(sin respuesta)</span>'}</div>
+        <div class="grade-row">
+          <div class="field score-field">
+            <label>Calificación (0-10)</label>
+            <input type="number" min="0" max="10" step="0.1" class="score-input" data-level="${lv.id}" data-exidx="${i}" value="${typeof sc.score==='number'?sc.score:''}">
+          </div>
+          <div class="field" style="flex:2;">
+            <label>Retroalimentación</label>
+            <input type="text" data-level="${lv.id}" data-exidx="${i}" class="fb-input" value="${sc.feedback?escapeHtml(sc.feedback):''}" placeholder="Comentario para el alumno...">
+          </div>
+          <button class="primary saveGradeBtn" data-level="${lv.id}" data-exidx="${i}">Guardar</button>
+        </div>
+      </div>`;
+    });
+    levelsHtml += `<h3 style="margin-top:26px;">${lv.code} · ${escapeHtml(lv.title)} <span class="mono muted" style="font-size:12px;">(${st==='graded'?'calificado':'entregado'})</span></h3>${exsHtml}`;
+  });
+
+  if(!levelsHtml){
+    levelsHtml = `<p class="muted">Este alumno aún no ha entregado ningún tema.</p>`;
+  }
+
+  let msgsHtml = "";
+  (state.selectedStudentMessages||[]).slice().reverse().forEach(m=>{
+    msgsHtml += `<div class="msg-item"><div class="msg-date">${escapeHtml(m.date)}</div>${escapeHtml(m.text)}</div>`;
+  });
+
+  return `
+    <span class="back-link" id="backToOverview">← volver al listado</span>
+    <h2 style="margin-bottom:2px;">${escapeHtml(info.name)}</h2>
+    <span class="muted mono" style="font-size:12px;">@${escapeHtml(info.username)}</span>
+    <div class="stat-row" style="margin-top:18px;">
+      <div class="stat-card"><div class="stat-num">${stats.completedLevels}/${TOTAL_LEVELS}</div><div class="stat-lbl">Temas entregados</div></div>
+      <div class="stat-card"><div class="stat-num">${stats.avg!==null?stats.avg.toFixed(1):"—"}</div><div class="stat-lbl">Promedio final</div></div>
+      <div class="stat-card"><div class="stat-num">${stats.gradedCount}/${stats.totalExs}</div><div class="stat-lbl">Calificados</div></div>
+    </div>
+
+    <div class="exercise-card">
+      <label>Enviar mensaje de retroalimentación general</label>
+      <textarea id="adminMsgBox" placeholder="Escribe un mensaje para este alumno..."></textarea>
+      <button class="primary" id="sendMsgBtn" style="margin-top:10px;">Enviar mensaje</button>
+      ${state.saveNote ? `<span class="save-note">${state.saveNote}</span>` : ""}
+    </div>
+    ${msgsHtml ? `<h3>Historial de mensajes</h3>${msgsHtml}` : ""}
+
+    <h3 style="margin-top:30px;">Temas entregados</h3>
+    ${levelsHtml}
+  `;
+}
+
+function attachAdminHandlers(){
+  const logoutTop = document.getElementById("logoutBtnTop");
+  if(logoutTop) logoutTop.addEventListener("click", doLogout);
+  const logoutAdmin = document.getElementById("logoutBtnAdmin");
+  if(logoutAdmin) logoutAdmin.addEventListener("click", doLogout);
+
+  if(!state.selectedStudent){
+    renderAdminOverviewAsync();
+    return;
+  }
+
+  const back = document.getElementById("backToOverview");
+  if(back) back.addEventListener("click", async ()=>{
+    state.selectedStudent = null;
+    state.selectedStudentProgress = null;
+    state.saveNote = "";
+    await loadAdminData();
+    render();
+  });
+
+  document.querySelectorAll(".saveGradeBtn").forEach(btn=>{
+    btn.addEventListener("click", async ()=>{
+      const levelId = parseInt(btn.dataset.level,10);
+      const exIdx = btn.dataset.exidx;
+      const container = btn.closest(".grade-row");
+      const scoreInput = container.querySelector(".score-input");
+      const fbInput = container.querySelector(".fb-input");
+      const scoreVal = scoreInput.value === "" ? null : parseFloat(scoreInput.value);
+      const prog = state.selectedStudentProgress;
+      if(!prog.levels[levelId].scores) prog.levels[levelId].scores = {};
+      prog.levels[levelId].scores[exIdx] = { score: scoreVal, feedback: fbInput.value.trim(), gradedAt: new Date().toLocaleString('es-MX') };
+      const lv = LEVELS[levelId];
+      const allGraded = lv.exs.every((_,i)=> prog.levels[levelId].scores[i] && typeof prog.levels[levelId].scores[i].score === "number");
+      if(allGraded) prog.levels[levelId].status = "graded";
+      await sSet("progress:"+state.selectedStudent, prog);
+      state.saveNote = "Calificación guardada.";
+      render();
+    });
+  });
+
+  const sendBtn = document.getElementById("sendMsgBtn");
+  if(sendBtn){
+    sendBtn.addEventListener("click", async ()=>{
+      const box = document.getElementById("adminMsgBox");
+      const text = box.value.trim();
+      if(!text) return;
+      const msgs = state.selectedStudentMessages || [];
+      msgs.push({ text, date: new Date().toLocaleString('es-MX'), from: state.currentUser.username });
+      await sSet("messages:"+state.selectedStudent, msgs);
+      state.selectedStudentMessages = msgs;
+      state.saveNote = "Mensaje enviado.";
+      render();
+    });
+  }
+}
+
+/* ============================= UTIL ============================= */
+function escapeHtml(str){
+  if(str===null || str===undefined) return "";
+  return String(str)
+    .replaceAll("&","&amp;").replaceAll("<","&lt;").replaceAll(">","&gt;")
+    .replaceAll('"',"&quot;").replaceAll("'","&#039;");
+}
+
+/* ============================= INIT ============================= */
+(async function init(){
+  try{
+    await ensureAdmin();
+    await render();
+  }catch(err){
+    document.getElementById("app").innerHTML =
+      '<div style="max-width:520px;margin:60px auto;font-family:IBM Plex Mono,monospace;color:#E5646E;padding:20px;border:1px solid #E5646E;">'+
+      '<h2 style="margin-top:0;">Error al iniciar la app</h2>'+
+      '<p style="color:#EDEFF7;">'+escapeHtml(err && err.message ? err.message : String(err))+'</p>'+
+      '<p style="color:#98A2C7;">Recarga la página. Si el problema sigue, avísale al profesor con este mensaje.</p>'+
+      '</div>';
+  }
+})();
+window.addEventListener("error", function(e){
+  console.error("Error no capturado:", e.error || e.message);
+});
+
+</script>
+</body>
+</html>
