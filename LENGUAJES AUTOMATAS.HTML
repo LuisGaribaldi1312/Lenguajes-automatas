@@ -6,6 +6,7 @@
 <title>Laboratorio de Compiladores — Lenguajes y Autómatas</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600;700&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <style>
   :root{
     --bg:#10152A;
@@ -118,6 +119,11 @@
   .field{margin-bottom:16px;}
   .err{color:var(--rose);font-size:13px;margin:10px 0 0 0;font-family:var(--mono);}
   .ok-msg{color:var(--teal);font-size:13px;margin:10px 0 0 0;font-family:var(--mono);}
+  .info-box{
+    max-width:400px;margin:0 auto 18px auto;border:1px solid var(--amber-dim);
+    background:rgba(242,184,75,.08);padding:12px 14px;font-family:var(--mono);
+    font-size:12px;color:var(--amber);
+  }
 
   /* ---------- APP SHELL ---------- */
   .shell{display:grid;grid-template-columns:300px 1fr;min-height:100vh;}
@@ -218,255 +224,91 @@
 <div id="app"></div>
 
 <script>
-/* ============================= CURRÍCULA ============================= */
-const CURRICULUM = [
-  { unit:"UNIDAD 1", unitTitle:"Análisis semántico", topics:[
-    {code:"1.1", title:"Árboles de expresiones", exs:[
-      {type:"Teoría", prompt:"Explica qué es un árbol de expresión (árbol sintáctico anotado semánticamente) y qué información almacena un nodo hoja frente a un nodo interno."},
-      {type:"Práctica", prompt:"Construye el árbol de expresión para (a + b) * (c - d) / e. Represéntalo con paréntesis anidados o indentación y explica el orden de evaluación."}
-    ]},
-    {code:"1.2", title:"Acciones semánticas de un analizador sintáctico", exs:[
-      {type:"Teoría", prompt:"¿Qué es una acción semántica y en qué momento del análisis sintáctico se ejecuta? Da un ejemplo de una producción con una acción semántica embebida { ... }."},
-      {type:"Práctica", prompt:"Para la producción E → E1 + T, escribe la acción semántica que calcule E.val a partir de E1.val y T.val usando atributos sintetizados."}
-    ]},
-    {code:"1.3", title:"Comprobación de tipos en expresiones", exs:[
-      {type:"Teoría", prompt:"Explica la diferencia entre una coerción implícita de tipos y un error de tipos, y cómo decide un compilador si dos operandos son compatibles."},
-      {type:"Práctica", prompt:"Dada la expresión x(int) + y(float) * z(int), indica qué conversiones de tipo se generan y cuál es el tipo resultante final."}
-    ]},
-    {code:"1.4", title:"Pila semántica en un analizador sintáctico", exs:[
-      {type:"Teoría", prompt:"¿Para qué sirve la pila semántica y cómo se mantiene sincronizada con la pila del analizador sintáctico (por ejemplo, uno LR)?"},
-      {type:"Práctica", prompt:"Simula paso a paso el contenido de la pila semántica al reducir la cadena id + id * id con una gramática de expresiones con precedencia de operadores."}
-    ]},
-    {code:"1.5", title:"Esquema de traducción", exs:[
-      {type:"Teoría", prompt:"Define qué es un esquema de traducción dirigido por la sintaxis (SDT) y en qué se diferencia de una gramática atribuida."},
-      {type:"Práctica", prompt:"Escribe el esquema de traducción para convertir una instrucción if-then-else en cuádruplos con etiquetas de salto."}
-    ]},
-    {code:"1.6", title:"Generación de la tabla de símbolos y direcciones", exs:[
-      {type:"Teoría", prompt:"¿Qué campos típicos contiene una entrada de la tabla de símbolos (nombre, tipo, ámbito, dirección, tamaño)? Explica brevemente cada uno."},
-      {type:"Práctica", prompt:"Para el bloque { int a; float b; char c; }, genera la tabla de símbolos asignando direcciones consecutivas según el tamaño de cada tipo (int=4, float=4, char=1)."}
-    ]},
-    {code:"1.7", title:"Manejo de errores semánticos", exs:[
-      {type:"Teoría", prompt:"Menciona tres tipos de errores semánticos (no sintácticos) y cómo se detectan al recorrer el árbol de expresión."},
-      {type:"Práctica", prompt:"Detecta y describe los errores semánticos en: int x; x = \"hola\"; y = x + z;  (y, z no declaradas)."}
-    ]}
-  ]},
-  { unit:"UNIDAD 2", unitTitle:"Generación de código intermedio", topics:[
-    {code:"2.1.1", title:"Notación prefija", exs:[
-      {type:"Teoría", prompt:"Explica cómo se recorre un árbol de expresión (preorden) para obtener su notación prefija."},
-      {type:"Práctica", prompt:"Convierte a notación prefija la expresión infija: (a + b) * (c - d)."}
-    ]},
-    {code:"2.1.2", title:"Notación infija", exs:[
-      {type:"Teoría", prompt:"¿Por qué la notación infija necesita paréntesis y reglas de precedencia para no ser ambigua?"},
-      {type:"Práctica", prompt:"Dada la expresión postfija a b + c d - *, escribe su forma infija totalmente parentizada."}
-    ]},
-    {code:"2.1.3", title:"Notación postfija", exs:[
-      {type:"Teoría", prompt:"Explica el algoritmo, usando una pila, para evaluar una expresión escrita en notación postfija."},
-      {type:"Práctica", prompt:"Convierte a notación postfija: a + b * (c - d) / e."}
-    ]},
-    {code:"2.2.1", title:"Notación Polaca", exs:[
-      {type:"Teoría", prompt:"¿Qué relación hay entre la notación polaca de Łukasiewicz y la notación prefija? ¿Se evalúan de la misma manera?"},
-      {type:"Práctica", prompt:"Evalúa, mostrando cada paso de la pila, la expresión en notación polaca: * + 3 4 - 5 2"}
-    ]},
-    {code:"2.2.2", title:"Código P", exs:[
-      {type:"Teoría", prompt:"Describe qué es el código P (pseudocódigo de pila, como el usado por Pascal-P) y por qué es un código intermedio portable."},
-      {type:"Práctica", prompt:"Genera el código P (instrucciones tipo LOD, LIT, ADD, STO) para la asignación x = a + b * 2."}
-    ]},
-    {code:"2.2.3", title:"Triplos", exs:[
-      {type:"Teoría", prompt:"Explica la estructura de un triplo (operador, operando1, operando2) y cómo se referencian los resultados intermedios (por posición)."},
-      {type:"Práctica", prompt:"Genera los triplos para: x = (a + b) * (c - d)."}
-    ]},
-    {code:"2.2.4", title:"Cuádruplos", exs:[
-      {type:"Teoría", prompt:"¿En qué se diferencia un cuádruplo de un triplo? ¿Qué ventaja da usar una variable temporal explícita?"},
-      {type:"Práctica", prompt:"Genera los cuádruplos para x = (a + b) * (c - d), usando temporales T1, T2, etc."}
-    ]},
-    {code:"2.3.1", title:"Variables y constantes", exs:[
-      {type:"Teoría", prompt:"¿Cómo distingue el generador de código intermedio entre una referencia a variable y una constante literal al construir cuádruplos?"},
-      {type:"Práctica", prompt:"Genera el código intermedio (cuádruplos) para: area = 3.1416 * r * r."}
-    ]},
-    {code:"2.3.2", title:"Expresiones", exs:[
-      {type:"Teoría", prompt:"Describe cómo se respeta la precedencia y asociatividad de operadores al generar código intermedio para expresiones aritméticas y lógicas."},
-      {type:"Práctica", prompt:"Genera los cuádruplos para: a < b AND c >= d."}
-    ]},
-    {code:"2.3.3", title:"Instrucción de asignación", exs:[
-      {type:"Teoría", prompt:"¿Qué cuádruplo especial se usa para representar la asignación final del resultado a la variable destino?"},
-      {type:"Práctica", prompt:"Genera el código intermedio completo para: total = (precio * cantidad) - descuento."}
-    ]},
-    {code:"2.3.4", title:"Instrucciones de control", exs:[
-      {type:"Teoría", prompt:"Explica cómo se generan etiquetas y saltos condicionales/incondicionales para un ciclo while."},
-      {type:"Práctica", prompt:"Genera el código intermedio (cuádruplos con etiquetas) para: while (i < n) { i = i + 1; }"}
-    ]},
-    {code:"2.3.5", title:"Funciones", exs:[
-      {type:"Teoría", prompt:"¿Qué cuádruplos especiales se usan para representar el paso de parámetros y la llamada a una función (PARAM, CALL)?"},
-      {type:"Práctica", prompt:"Genera el código intermedio para la llamada: resultado = suma(a, b, 5)."}
-    ]},
-    {code:"2.3.6", title:"Estructuras", exs:[
-      {type:"Teoría", prompt:"¿Cómo se calcula el desplazamiento (offset) de un campo dentro de una estructura al generar código intermedio para un acceso como persona.edad?"},
-      {type:"Práctica", prompt:"Dado struct Persona { int edad; float sueldo; }, genera el código intermedio para: p.sueldo = p.sueldo + 500."}
-    ]}
-  ]},
-  { unit:"UNIDAD 3", unitTitle:"Optimización", topics:[
-    {code:"3.1.1", title:"Optimización local", exs:[
-      {type:"Teoría", prompt:"Explica en qué consiste la optimización local y menciona dos técnicas aplicadas dentro de un solo bloque básico."},
-      {type:"Práctica", prompt:"Optimiza eliminando subexpresiones comunes: t1 = a + b; t2 = a + b; t3 = t1 * t2;"}
-    ]},
-    {code:"3.1.2", title:"Optimización de ciclos", exs:[
-      {type:"Teoría", prompt:"¿Qué es el código invariante en el ciclo (loop-invariant code motion) y por qué moverlo fuera del ciclo mejora el rendimiento?"},
-      {type:"Práctica", prompt:"Optimiza: for (i=0;i<n;i++){ x = a*b; y[i] = x + i; } identificando y moviendo el código invariante fuera del ciclo."}
-    ]},
-    {code:"3.1.3", title:"Optimización global", exs:[
-      {type:"Teoría", prompt:"Explica la diferencia entre optimización local (un bloque básico) y optimización global (todo el flujo de un procedimiento)."},
-      {type:"Práctica", prompt:"En un grafo de flujo con 3 bloques básicos donde una variable se calcula igual en dos caminos distintos, describe cómo la optimización global eliminaría el cálculo redundante."}
-    ]},
-    {code:"3.1.4", title:"Optimización de mirilla", exs:[
-      {type:"Teoría", prompt:"Describe la técnica de optimización de mirilla (peephole) y menciona un patrón típico que elimina."},
-      {type:"Práctica", prompt:"Optimiza por mirilla: MOV R1, a; MOV a, R1;  Identifica y elimina la instrucción redundante y justifica."}
-    ]},
-    {code:"3.2.1", title:"Costo de ejecución", exs:[
-      {type:"Teoría", prompt:"Explica qué factores conforman el costo de ejecución de un programa: uso de memoria, registros y pilas."},
-      {type:"Práctica", prompt:"Compara el costo de evaluar a+b+c+d con y sin reutilización de un registro acumulador (en accesos a memoria vs. uso de registros)."}
-    ]},
-    {code:"3.2.2", title:"Criterios para mejorar el código", exs:[
-      {type:"Teoría", prompt:"Menciona tres criterios generales que un compilador debe balancear al optimizar (velocidad, tamaño de código, uso de memoria)."},
-      {type:"Práctica", prompt:"Dado x = y * 2, propone una transformación de fortalecimiento de operadores (strength reduction) y explica por qué es más eficiente."}
-    ]},
-    {code:"3.2.3", title:"Herramientas para el análisis del flujo de datos", exs:[
-      {type:"Teoría", prompt:"¿Qué es un grafo de flujo de control (CFG) y para qué se usa en el análisis de flujo de datos?"},
-      {type:"Práctica", prompt:"Dibuja en texto el grafo de flujo de control para: if (a>b) { x=1; } else { x=2; } y=x+1; señalando bloques básicos y aristas."}
-    ]}
-  ]},
-  { unit:"UNIDAD 4", unitTitle:"Generación de código objeto", topics:[
-    {code:"4.1", title:"Registros", exs:[
-      {type:"Teoría", prompt:"Explica qué es la asignación de registros y por qué es un recurso limitado que el compilador debe administrar cuidadosamente."},
-      {type:"Práctica", prompt:"Dado t1=a+b; t2=t1*c; t3=t2-d, asigna registros R1 y R2 reutilizándolos cuando un temporal ya no se necesite."}
-    ]},
-    {code:"4.2", title:"Lenguaje ensamblador", exs:[
-      {type:"Teoría", prompt:"¿Qué es el lenguaje ensamblador y qué relación uno a uno guarda con el lenguaje máquina?"},
-      {type:"Práctica", prompt:"Traduce a pseudo-ensamblador (LOAD, ADD, STORE) el código: t1 = a + b; x = t1 * 2."}
-    ]},
-    {code:"4.3", title:"Lenguaje máquina", exs:[
-      {type:"Teoría", prompt:"Explica la estructura general de una instrucción en lenguaje máquina (código de operación + operandos) con un ejemplo hipotético."},
-      {type:"Práctica", prompt:"Dada la instrucción ensamblador ADD R1, R2, codifícala en un formato binario hipotético de 16 bits que tú definas (opcode + registros)."}
-    ]},
-    {code:"4.4", title:"Administración de memoria", exs:[
-      {type:"Teoría", prompt:"Describe las diferencias entre asignación de memoria estática, en pila (stack) y dinámica (heap) durante la generación de código objeto."},
-      {type:"Práctica", prompt:"Para una función con 2 variables locales y 1 parámetro, dibuja el marco de pila (stack frame) indicando el orden y desplazamientos típicos."}
-    ]}
-  ]}
-];
+/* =====================================================================
+   CONFIGURACIÓN DE SUPABASE — REEMPLAZA ESTOS DOS VALORES
+   Los encuentras en tu proyecto: Project Settings → API
+   ===================================================================== */
+const SUPABASE_URL = "https://fiotnptytwombdknquid.supabase.co";      // <-- REEMPLAZA
+const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZpb3RucHR5dHdvbWJka25xdWlkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODkxODI0MDQsImV4cCI6MjEwNDc1ODQwNH0.pvijQa6s-G4ObqcM-lKKk5MOX7INFanHrnTnNOcFrRI";                 // <-- REEMPLAZA
 
-// aplanar a niveles
-const LEVELS = [];
-CURRICULUM.forEach(u=>{
-  u.topics.forEach(t=>{
-    LEVELS.push({ id: LEVELS.length, unit:u.unit, unitTitle:u.unitTitle, code:t.code, title:t.title, exs:t.exs });
-  });
-});
-const TOTAL_LEVELS = LEVELS.length;
-const TOTAL_EXS = LEVELS.reduce((a,l)=>a+l.exs.length,0);
+/* Credenciales con las que se auto-crea la cuenta del administrador
+   la primera vez que alguien abre la app sin sesión activa.
+   Cámbialas por las que tú quieras usar para entrar como administrador. */
+const ADMIN_EMAIL = "admin@labcompiladores.com";              // <-- puedes cambiar
+const ADMIN_PASSWORD = "CambiaEstaClave123!";                 // <-- CAMBIA esta clave
+const ADMIN_USERNAME = "admin";
+const ADMIN_FULLNAME = "Ing. Luis Alberto Garibaldi Leciwr";
 
-const ADMIN_USER = "Ing. Luis Alberto Garibaldi Leciwr";
-const ADMIN_PASS = "";
-
-/* ============================= STORAGE HELPERS ============================= */
-const LS_PREFIX = "labcompiladores_v1::";
-function hasNativeStorage(){
-  try{
-    return typeof window.storage !== "undefined" && window.storage && typeof window.storage.get === "function";
-  }catch(e){ return false; }
-}
-let STORAGE_MODE = hasNativeStorage() ? "shared" : "local";
-
-async function sGet(key){
-  if(hasNativeStorage()){
-    try{
-      const r = await window.storage.get(key, true);
-      return r ? JSON.parse(r.value) : null;
-    }catch(e){
-      return null;
-    }
-  }
-  try{
-    const raw = localStorage.getItem(LS_PREFIX+key);
-    return raw ? JSON.parse(raw) : null;
-  }catch(e){ return null; }
-}
-async function sSet(key, val){
-  if(hasNativeStorage()){
-    try{
-      const res = await window.storage.set(key, JSON.stringify(val), true);
-      return res;
-    }catch(e){ return null; }
-  }
-  try{
-    localStorage.setItem(LS_PREFIX+key, JSON.stringify(val));
-    return {key, value: JSON.stringify(val)};
-  }catch(e){ return null; }
-}
-async function sListKeys(prefix){
-  if(hasNativeStorage()){
-    try{
-      const r = await window.storage.list(prefix, true);
-      return r ? r.keys : [];
-    }catch(e){ return []; }
-  }
-  try{
-    const keys = [];
-    for(let i=0;i<localStorage.length;i++){
-      const k = localStorage.key(i);
-      if(k && k.indexOf(LS_PREFIX) === 0){
-        const realKey = k.substring(LS_PREFIX.length);
-        if(realKey.indexOf(prefix) === 0) keys.push(realKey);
-      }
-    }
-    return keys;
-  }catch(e){ return []; }
-}
-
-function emptyProgress(){
-  const levels = {};
-  LEVELS.forEach((lv,i)=>{
-    levels[lv.id] = { status: i===0 ? "unlocked" : "locked", answers:{}, scores:{} };
-  });
-  return { levels };
-}
-
-let STORAGE_AVAILABLE = true;
-async function ensureAdmin(){
-  try{
-    const existing = await sGet("user:"+ADMIN_USER);
-    if(!existing){
-      await sSet("user:"+ADMIN_USER, {username:ADMIN_USER, password:ADMIN_PASS, name:"Administrador", role:"admin"});
-    }
-  }catch(e){
-    // no-op: sGet/sSet already have their own fallbacks and never throw
-  }
-}
-function normalizeUsername(u){
-  return (u||"").trim().toLowerCase();
-}
-function isValidUsername(u){
-  return /^[a-z0-9_.\-]{3,20}$/.test(u);
-}
+const sb = (window.supabase && !SUPABASE_URL.includes("TU-PROYECTO"))
+  ? window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY)
+  : null;
 
 /* ============================= APP STATE ============================= */
+let LEVELS = [];
+let TOTAL_LEVELS = 0;
+let TOTAL_EXS = 0;
+let EX_META = {}; // exerciseId(db) -> { levelId, position }
+
 let state = {
   screen: "auth",       // auth | student | admin
   authTab: "login",     // login | register
   authError: "",
   authOk: "",
-  currentUser: null,    // {username,name,role}
+  currentUser: null,    // {id, username, name, role}
   progress: null,       // for student
   messages: [],         // for student
   selectedLevel: 0,
   studentView: "levels", // levels | messages
   // admin
-  studentsList: [],     // [{username,name}]
+  studentsList: [],     // [{id, username, name}]
   selectedStudent: null,
   selectedStudentProgress: null,
-  adminMsgDraft: "",
+  selectedStudentMessages: [],
   saveNote: "",
   sidebarOpen: false,
 };
+
+function normalizeUsername(u){ return (u||"").trim().toLowerCase(); }
+function isValidUsername(u){ return /^[a-z0-9_.\-]{3,20}$/.test(u); }
+
+/* ============================= CARGA DE RÚBRICA (BD) ============================= */
+async function loadCurriculum(){
+  const { data, error } = await sb
+    .from('levels')
+    .select('*, exercises(*)')
+    .order('order_index', { ascending: true })
+    .order('position', { foreignTable: 'exercises', ascending: true });
+  if(error) throw new Error("No se pudo cargar la rúbrica: " + error.message);
+  EX_META = {};
+  LEVELS = (data||[]).map(lv=>{
+    const exs = (lv.exercises||[]).slice().sort((a,b)=>a.position-b.position).map(e=>{
+      EX_META[e.id] = { levelId: lv.id, position: e.position };
+      return { exId: e.id, type: e.type, prompt: e.prompt };
+    });
+    return { id: lv.id, unit: lv.unit, unitTitle: lv.unit_title, code: lv.code, title: lv.title, exs };
+  });
+  TOTAL_LEVELS = LEVELS.length;
+  TOTAL_EXS = LEVELS.reduce((a,l)=>a+l.exs.length,0);
+}
+
+/* ============================= ADMIN AUTO-CREACIÓN ============================= */
+async function ensureAdmin(){
+  if(localStorage.getItem('lab_admin_ensured')) return;
+  const { data: sessionData } = await sb.auth.getSession();
+  if(sessionData.session){
+    // ya hay una sesión activa (de un alumno o admin real) — no la tocamos.
+    return;
+  }
+  try{
+    await sb.auth.signUp({
+      email: ADMIN_EMAIL,
+      password: ADMIN_PASSWORD,
+      options: { data: { username: ADMIN_USERNAME, full_name: ADMIN_FULLNAME, role: 'admin' } }
+    });
+  }catch(e){ /* probablemente ya existe, se ignora */ }
+  try{ await sb.auth.signOut(); }catch(e){}
+  localStorage.setItem('lab_admin_ensured','1');
+}
 
 function levelStatus(progress, levelId){
   return progress.levels[levelId] ? progress.levels[levelId].status : "locked";
@@ -512,15 +354,11 @@ async function render(){
 /* ============================= AUTH SCREEN ============================= */
 function renderAuth(){
   const isLogin = state.authTab === "login";
-  const storageWarning = STORAGE_MODE === "local" ? `
-    <div style="max-width:400px;margin:0 auto 18px auto;border:1px solid var(--amber-dim);background:rgba(242,184,75,.08);padding:12px 14px;font-family:var(--mono);font-size:12px;color:var(--amber);">
-      ⚠ Guardando en este navegador (modo local). Los datos no se comparten automáticamente con otras computadoras. Para que tú y tus alumnos vean el mismo progreso, abran la app desde el mismo enlace de Claude.
-    </div>` : "";
   return `
   <div class="auth-wrap">
     <div class="auth-hero">
       <div>
-        <div class="hero-tag">// lenguajes y autómatas · admin: ${ADMIN_USER} / ${ADMIN_PASS}</div>
+        <div class="hero-tag">// lenguajes y autómatas · plataforma de práctica</div>
         <h1 class="hero-title">Laboratorio de Compiladores</h1>
         <p class="hero-sub">Practica análisis semántico, generación de código intermedio, optimización y generación de código objeto — un tema a la vez, en orden, hasta dominar el curso.</p>
       </div>
@@ -533,14 +371,13 @@ function renderAuth(){
     </div>
     <div class="auth-form-side">
       <div class="auth-card">
-        ${storageWarning}
         <div class="auth-tabs">
           <button class="auth-tab ${isLogin?'active':''}" data-tab="login">Iniciar sesión</button>
           <button class="auth-tab ${!isLogin?'active':''}" data-tab="register">Registrarse</button>
         </div>
         ${isLogin ? `
           <form id="loginForm">
-            <div class="field"><label>Usuario</label><input type="text" id="loginUser" autocomplete="username" required></div>
+            <div class="field"><label>Correo electrónico</label><input type="email" id="loginEmail" autocomplete="username" required></div>
             <div class="field"><label>Contraseña</label><input type="password" id="loginPass" autocomplete="current-password" required></div>
             <button type="submit" class="primary" style="width:100%">Entrar</button>
             ${state.authError ? `<p class="err">${state.authError}</p>` : ""}
@@ -548,8 +385,9 @@ function renderAuth(){
         ` : `
           <form id="registerForm">
             <div class="field"><label>Nombre completo</label><input type="text" id="regName" required></div>
-            <div class="field"><label>Usuario (sin espacios, ej: jperez)</label><input type="text" id="regUser" required pattern="[a-zA-Z0-9_.\-]{3,20}" title="3-20 caracteres: letras, números, punto, guion o guion bajo"></div>
-            <div class="field"><label>Contraseña</label><input type="password" id="regPass" required></div>
+            <div class="field"><label>Correo electrónico</label><input type="email" id="regEmail" required></div>
+            <div class="field"><label>Usuario (sin espacios, ej: jperez)</label><input type="text" id="regUser" required pattern="[a-zA-Z0-9_.\\-]{3,20}" title="3-20 caracteres: letras, números, punto, guion o guion bajo"></div>
+            <div class="field"><label>Contraseña (mínimo 6 caracteres)</label><input type="password" id="regPass" required minlength="6"></div>
             <button type="submit" class="primary" style="width:100%">Crear cuenta</button>
             ${state.authError ? `<p class="err">${state.authError}</p>` : ""}
             ${state.authOk ? `<p class="ok-msg">${state.authOk}</p>` : ""}
@@ -568,73 +406,128 @@ function attachAuthHandlers(){
       render();
     });
   });
+
   const loginForm = document.getElementById("loginForm");
   if(loginForm){
     loginForm.addEventListener("submit", async (e)=>{
       e.preventDefault();
-      const uRaw = document.getElementById("loginUser").value;
-      const p = document.getElementById("loginPass").value;
-      const u = normalizeUsername(uRaw);
-      const rec = await sGet("user:"+u);
-      if(!rec || rec.password !== p){
-        state.authError = "Usuario o contraseña incorrectos.";
-        render();
-        return;
-      }
-      state.currentUser = {username:rec.username, name:rec.name, role:rec.role};
+      const submitBtn = loginForm.querySelector('button[type="submit"]');
+      submitBtn.disabled = true;
+      const email = document.getElementById("loginEmail").value.trim();
+      const pass = document.getElementById("loginPass").value;
       state.authError = "";
-      if(rec.role === "admin"){
-        await loadAdminData();
-        state.screen = "admin";
-      } else {
-        await loadStudentData();
-        state.screen = "student";
+      try{
+        const { data, error } = await sb.auth.signInWithPassword({ email, password: pass });
+        if(error){
+          state.authError = /confirm/i.test(error.message)
+            ? "Debes confirmar tu correo antes de iniciar sesión (revisa tu bandeja de entrada)."
+            : "Correo o contraseña incorrectos.";
+          render();
+          return;
+        }
+        const { data: profile, error: profErr } = await sb.from('profiles').select('*').eq('id', data.user.id).single();
+        if(profErr || !profile){
+          state.authError = "No se encontró tu perfil. Contacta al administrador.";
+          render();
+          return;
+        }
+        state.currentUser = { id: profile.id, username: profile.username, name: profile.full_name, role: profile.role };
+        if(profile.role === "admin"){
+          await loadAdminData();
+          state.screen = "admin";
+        } else {
+          await loadStudentData();
+          state.screen = "student";
+        }
+        render();
+      }catch(err){
+        state.authError = "Error al iniciar sesión: " + (err.message||err);
+        render();
       }
-      render();
     });
   }
+
   const regForm = document.getElementById("registerForm");
   if(regForm){
     regForm.addEventListener("submit", async (e)=>{
       e.preventDefault();
-      state.authOk = "";
+      state.authOk = ""; state.authError = "";
+      const submitBtn = regForm.querySelector('button[type="submit"]');
       const name = document.getElementById("regName").value.trim();
+      const email = document.getElementById("regEmail").value.trim();
       const uRaw = document.getElementById("regUser").value;
       const p = document.getElementById("regPass").value;
       const u = normalizeUsername(uRaw);
-      if(!name || !uRaw || !p){ state.authError="Completa todos los campos."; render(); return; }
+      if(!name || !email || !uRaw || !p){ state.authError="Completa todos los campos."; render(); return; }
       if(!isValidUsername(u)){
         state.authError = "El usuario debe tener 3-20 caracteres: solo letras, números, punto, guion o guion bajo (sin espacios ni acentos).";
         render();
         return;
       }
-      if(u === ADMIN_USER){ state.authError="Ese usuario no está disponible."; render(); return; }
-      let existing;
-      try{ existing = await sGet("user:"+u); }catch(e){ existing = null; }
-      if(existing){ state.authError="Ese usuario ya existe."; render(); return; }
-      const saveUser = await sSet("user:"+u, {username:u, password:p, name:name, role:"student"});
-      const saveProg = await sSet("progress:"+u, emptyProgress());
-      if(!saveUser || !saveProg){
-        state.authError = "No se pudo crear la cuenta. Intenta de nuevo en unos segundos.";
+      if(u === ADMIN_USERNAME){ state.authError="Ese usuario no está disponible."; render(); return; }
+      submitBtn.disabled = true;
+      try{
+        const { data, error } = await sb.auth.signUp({
+          email, password: p,
+          options: { data: { username: u, full_name: name, role: 'student' } }
+        });
+        if(error){
+          state.authError = /registered/i.test(error.message)
+            ? "Ese correo ya está registrado."
+            : "No se pudo crear la cuenta (verifica que el usuario y correo no estén ya en uso).";
+          render();
+          return;
+        }
+        if(data.session){
+          // confirmación de correo desactivada en el proyecto: ya quedó logeado
+          const { data: profile } = await sb.from('profiles').select('*').eq('id', data.user.id).single();
+          if(profile){
+            state.currentUser = { id: profile.id, username: profile.username, name: profile.full_name, role: profile.role };
+            await loadStudentData();
+            state.screen = "student";
+            render();
+            return;
+          }
+        }
+        state.authOk = "Cuenta creada. Revisa tu correo para confirmar la cuenta y después inicia sesión.";
+        state.authTab = "login";
         render();
-        return;
+      }catch(err){
+        state.authError = "No se pudo crear la cuenta: " + (err.message||err);
+        render();
       }
-      state.authError = "";
-      state.authOk = "Cuenta creada correctamente con el usuario \"" + u + "\". Ahora inicia sesión.";
-      state.authTab = "login";
-      render();
     });
   }
 }
 
 /* ============================= STUDENT ============================= */
 async function loadStudentData(){
-  const u = state.currentUser.username;
-  let prog = await sGet("progress:"+u);
-  if(!prog){ prog = emptyProgress(); await sSet("progress:"+u, prog); }
-  state.progress = prog;
-  const msgs = await sGet("messages:"+u);
-  state.messages = msgs || [];
+  const uid = state.currentUser.id;
+  const [{data:lp, error:e1}, {data:subs, error:e2}, {data:msgs, error:e3}] = await Promise.all([
+    sb.from('level_progress').select('*').eq('student_id', uid),
+    sb.from('submissions').select('*').eq('student_id', uid),
+    sb.from('messages').select('*').eq('student_id', uid).order('created_at', {ascending:true})
+  ]);
+  if(e1||e2||e3) throw new Error("No se pudo cargar tu progreso.");
+
+  const progress = { levels:{} };
+  LEVELS.forEach(lv=>{
+    const row = (lp||[]).find(r=>r.level_id===lv.id);
+    progress.levels[lv.id] = { status: row ? row.status : (lv.id===0?'unlocked':'locked'), answers:{}, scores:{}, subIds:{} };
+  });
+  (subs||[]).forEach(s=>{
+    const meta = EX_META[s.exercise_id];
+    if(!meta) return;
+    const L = progress.levels[meta.levelId];
+    L.subIds[meta.position] = s.id;
+    if(s.answer) L.answers[meta.position] = s.answer;
+    if(s.score !== null && s.score !== undefined){
+      L.scores[meta.position] = { score: Number(s.score), feedback: s.feedback };
+    }
+  });
+
+  state.progress = progress;
+  state.messages = (msgs||[]).map(m=>({ text: m.body, date: new Date(m.created_at).toLocaleString('es-MX') }));
   state.selectedLevel = 0;
   state.studentView = "levels";
 }
@@ -648,13 +541,15 @@ function renderStudentShell(){
       <div class="brand">// lab de compiladores</div>
       <div class="userline">${escapeHtml(state.currentUser.name)}</div>
     </div>`;
-  CURRICULUM.forEach(u=>{
-    sidebarHtml += `<div class="unit-block"><div class="unit-label">${u.unit} — ${u.unitTitle}</div>`;
-    LEVELS.filter(lv=>lv.unit===u.unit).forEach(lv=>{
+  const units = [...new Set(LEVELS.map(l=>l.unit))];
+  units.forEach(unit=>{
+    const first = LEVELS.find(l=>l.unit===unit);
+    sidebarHtml += `<div class="unit-block"><div class="unit-label">${unit} — ${first.unitTitle}</div>`;
+    LEVELS.filter(lv=>lv.unit===unit).forEach(lv=>{
       const st = levelStatus(prog, lv.id);
       const dotClass = st==="locked" ? "dot-locked" : st==="unlocked" ? "dot-unlocked" : st==="submitted" ? "dot-submitted" : "dot-graded";
-      const active = (state.studentView==="levels" && state.selectedLevel===lv.id) ? "active" : "";
-      sidebarHtml += `<div class="level-row ${active}" data-level="${lv.id}">
+      const active = (state.studentView==="levels" && state.selectedLevel===LEVELS.findIndex(x=>x.id===lv.id)) ? "active" : "";
+      sidebarHtml += `<div class="level-row ${active}" data-level="${LEVELS.findIndex(x=>x.id===lv.id)}">
         <span class="lvl-dot ${dotClass}"></span>
         <span class="level-code">${lv.code}</span>
         <span>${escapeHtml(lv.title)}</span>
@@ -727,7 +622,7 @@ function renderStudentLevel(prog, stats){
         <h2>${lv.code} · ${escapeHtml(lv.title)}</h2>
         <span class="muted mono" style="font-size:12px;">${lv.unit} — ${lv.unitTitle}</span>
       </div>
-      <div class="pill amber">Nivel ${lv.id+1} / ${TOTAL_LEVELS}</div>
+      <div class="pill amber">Nivel ${state.selectedLevel+1} / ${TOTAL_LEVELS}</div>
     </div>
     <div class="stat-row">
       <div class="stat-card"><div class="stat-num">${stats.completedLevels}/${TOTAL_LEVELS}</div><div class="stat-lbl">Temas entregados</div></div>
@@ -777,7 +672,7 @@ function attachStudentHandlers(){
       const answers = {};
       let allFilled = true;
       textareas.forEach(ta=>{
-        const idx = ta.dataset.exidx;
+        const idx = parseInt(ta.dataset.exidx,10);
         const val = ta.value.trim();
         if(!val) allFilled = false;
         answers[idx] = val;
@@ -786,24 +681,53 @@ function attachStudentHandlers(){
         alert("Responde ambos ejercicios antes de entregar el tema.");
         return;
       }
-      const prog = state.progress;
-      prog.levels[lv.id].answers = answers;
-      prog.levels[lv.id].status = "submitted";
-      const nextId = lv.id + 1;
-      if(prog.levels[nextId] && prog.levels[nextId].status === "locked"){
-        prog.levels[nextId].status = "unlocked";
+      submitBtn.disabled = true;
+      try{
+        const uid = state.currentUser.id;
+        for(let i=0;i<lv.exs.length;i++){
+          const ex = lv.exs[i];
+          const existingId = state.progress.levels[lv.id].subIds[i];
+          if(existingId){
+            const { error } = await sb.from('submissions')
+              .update({ answer: answers[i], submitted_at: new Date().toISOString() })
+              .eq('id', existingId);
+            if(error) throw error;
+          } else {
+            const { error } = await sb.from('submissions')
+              .insert({ student_id: uid, exercise_id: ex.exId, answer: answers[i], submitted_at: new Date().toISOString() });
+            if(error) throw error;
+          }
+        }
+        const { error: upErr } = await sb.from('level_progress')
+          .update({ status:'submitted', submitted_at: new Date().toISOString() })
+          .eq('student_id', uid).eq('level_id', lv.id);
+        if(upErr) throw upErr;
+
+        const nextLevel = LEVELS[state.selectedLevel+1];
+        if(nextLevel && state.progress.levels[nextLevel.id].status === 'locked'){
+          await sb.from('level_progress')
+            .update({ status:'unlocked', unlocked_at: new Date().toISOString() })
+            .eq('student_id', uid).eq('level_id', nextLevel.id);
+        }
+        await loadStudentData();
+        render();
+      }catch(err){
+        alert("Ocurrió un error al entregar el tema: " + (err.message||err));
+        submitBtn.disabled = false;
       }
-      await sSet("progress:"+state.currentUser.username, prog);
-      render();
     });
   }
 }
 
 async function doLogout(){
+  try{ await sb.auth.signOut(); }catch(e){}
   state.currentUser = null;
   state.progress = null;
   state.messages = [];
   state.selectedLevel = 0;
+  state.studentsList = [];
+  state.selectedStudent = null;
+  state.selectedStudentProgress = null;
   state.screen = "auth";
   state.authTab = "login";
   state.authError = ""; state.authOk="";
@@ -812,16 +736,9 @@ async function doLogout(){
 
 /* ============================= ADMIN ============================= */
 async function loadAdminData(){
-  const keys = await sListKeys("user:");
-  const students = [];
-  for(const k of keys){
-    const rec = await sGet(k);
-    if(rec && rec.role === "student"){
-      students.push({username:rec.username, name:rec.name});
-    }
-  }
-  students.sort((a,b)=>a.name.localeCompare(b.name));
-  state.studentsList = students;
+  const { data, error } = await sb.from('profiles').select('id, username, full_name').eq('role','student').order('full_name');
+  if(error) throw new Error("No se pudo cargar la lista de alumnos: " + error.message);
+  state.studentsList = (data||[]).map(s=>({ id:s.id, username:s.username, name:s.full_name }));
   state.selectedStudent = null;
   state.selectedStudentProgress = null;
 }
@@ -856,34 +773,39 @@ function renderAdminOverview(){
   if(state.studentsList.length === 0){
     return `<p class="muted">Todavía no hay alumnos registrados.</p>`;
   }
-  let rows = "";
-  state._studentStatsCache = state._studentStatsCache || {};
   return `<div id="adminTableWrap"><p class="muted">Cargando estadísticas de alumnos…</p></div>`;
 }
 
 async function renderAdminOverviewAsync(){
   const wrap = document.getElementById("adminTableWrap");
   if(!wrap) return;
+  const { data, error } = await sb.from('student_stats').select('*');
+  if(error){
+    wrap.innerHTML = `<p class="err">No se pudieron cargar las estadísticas: ${escapeHtml(error.message)}</p>`;
+    return;
+  }
+  const byId = {};
+  (data||[]).forEach(r=>{ byId[r.student_id] = r; });
+
   let rows = "";
-  for(const s of state.studentsList){
-    const prog = await sGet("progress:"+s.username);
-    const p = prog || emptyProgress();
-    const stats = computeStudentStats(p);
-    rows += `<tr class="clickable" data-username="${escapeHtml(s.username)}">
+  state.studentsList.forEach(s=>{
+    const st = byId[s.id] || {};
+    const avg = (st.average_score !== undefined && st.average_score !== null) ? Number(st.average_score).toFixed(1) : "—";
+    rows += `<tr class="clickable" data-studentid="${s.id}">
       <td>${escapeHtml(s.name)}</td>
       <td class="mono muted">${escapeHtml(s.username)}</td>
-      <td>${stats.completedLevels}/${TOTAL_LEVELS}</td>
-      <td>${stats.gradedCount}/${stats.totalExs}</td>
-      <td>${stats.avg!==null?stats.avg.toFixed(1):"—"}</td>
+      <td>${st.levels_completed||0}/${TOTAL_LEVELS}</td>
+      <td>${st.graded_exercises||0}/${TOTAL_EXS}</td>
+      <td>${avg}</td>
     </tr>`;
-  }
+  });
   wrap.innerHTML = `<table>
     <thead><tr><th>Alumno</th><th>Usuario</th><th>Temas entregados</th><th>Ejercicios calificados</th><th>Promedio</th></tr></thead>
     <tbody>${rows}</tbody>
   </table>`;
-  wrap.querySelectorAll("tr[data-username]").forEach(tr=>{
+  wrap.querySelectorAll("tr[data-studentid]").forEach(tr=>{
     tr.addEventListener("click", async ()=>{
-      state.selectedStudent = tr.dataset.username;
+      state.selectedStudent = tr.dataset.studentid;
       await openStudentDetail();
       render();
     });
@@ -891,14 +813,33 @@ async function renderAdminOverviewAsync(){
 }
 
 async function openStudentDetail(){
-  const prog = await sGet("progress:"+state.selectedStudent);
-  state.selectedStudentProgress = prog || emptyProgress();
-  const msgs = await sGet("messages:"+state.selectedStudent);
-  state.selectedStudentMessages = msgs || [];
+  const uid = state.selectedStudent;
+  const [{data:lp}, {data:subs}, {data:msgs}] = await Promise.all([
+    sb.from('level_progress').select('*').eq('student_id', uid),
+    sb.from('submissions').select('*').eq('student_id', uid),
+    sb.from('messages').select('*').eq('student_id', uid).order('created_at', {ascending:true})
+  ]);
+  const progress = { levels:{} };
+  LEVELS.forEach(lv=>{
+    const row = (lp||[]).find(r=>r.level_id===lv.id);
+    progress.levels[lv.id] = { status: row ? row.status : 'locked', answers:{}, scores:{}, subIds:{} };
+  });
+  (subs||[]).forEach(s=>{
+    const meta = EX_META[s.exercise_id];
+    if(!meta) return;
+    const L = progress.levels[meta.levelId];
+    L.subIds[meta.position] = s.id;
+    if(s.answer) L.answers[meta.position] = s.answer;
+    if(s.score !== null && s.score !== undefined){
+      L.scores[meta.position] = { score: Number(s.score), feedback: s.feedback };
+    }
+  });
+  state.selectedStudentProgress = progress;
+  state.selectedStudentMessages = (msgs||[]).map(m=>({ text: m.body, date: new Date(m.created_at).toLocaleString('es-MX') }));
 }
 
 function renderAdminStudentDetail(){
-  const info = state.studentsList.find(s=>s.username===state.selectedStudent);
+  const info = state.studentsList.find(s=>s.id===state.selectedStudent);
   const prog = state.selectedStudentProgress;
   const stats = computeStudentStats(prog);
 
@@ -906,7 +847,7 @@ function renderAdminStudentDetail(){
   LEVELS.forEach(lv=>{
     const L = prog.levels[lv.id];
     const st = L.status;
-    if(st === "locked") return; // no mostrar temas que ni siquiera ha desbloqueado
+    if(st === "locked") return;
     let exsHtml = "";
     lv.exs.forEach((ex,i)=>{
       const answer = L.answers[i] || "";
@@ -989,18 +930,32 @@ function attachAdminHandlers(){
   document.querySelectorAll(".saveGradeBtn").forEach(btn=>{
     btn.addEventListener("click", async ()=>{
       const levelId = parseInt(btn.dataset.level,10);
-      const exIdx = btn.dataset.exidx;
+      const exIdx = parseInt(btn.dataset.exidx,10);
       const container = btn.closest(".grade-row");
       const scoreInput = container.querySelector(".score-input");
       const fbInput = container.querySelector(".fb-input");
       const scoreVal = scoreInput.value === "" ? null : parseFloat(scoreInput.value);
       const prog = state.selectedStudentProgress;
-      if(!prog.levels[levelId].scores) prog.levels[levelId].scores = {};
-      prog.levels[levelId].scores[exIdx] = { score: scoreVal, feedback: fbInput.value.trim(), gradedAt: new Date().toLocaleString('es-MX') };
-      const lv = LEVELS[levelId];
+      const subId = prog.levels[levelId].subIds[exIdx];
+      if(!subId){ alert("No se encontró la entrega de este ejercicio."); return; }
+      btn.disabled = true;
+      const feedbackVal = fbInput.value.trim();
+      const { error } = await sb.from('submissions').update({
+        score: scoreVal, feedback: feedbackVal,
+        graded_at: new Date().toISOString(), graded_by: state.currentUser.id
+      }).eq('id', subId);
+      if(error){
+        alert("Error al guardar la calificación: " + error.message);
+        btn.disabled = false;
+        return;
+      }
+      prog.levels[levelId].scores[exIdx] = { score: scoreVal, feedback: feedbackVal };
+      const lv = LEVELS.find(l=>l.id===levelId);
       const allGraded = lv.exs.every((_,i)=> prog.levels[levelId].scores[i] && typeof prog.levels[levelId].scores[i].score === "number");
-      if(allGraded) prog.levels[levelId].status = "graded";
-      await sSet("progress:"+state.selectedStudent, prog);
+      if(allGraded){
+        await sb.from('level_progress').update({ status:'graded' }).eq('student_id', state.selectedStudent).eq('level_id', levelId);
+        prog.levels[levelId].status = 'graded';
+      }
       state.saveNote = "Calificación guardada.";
       render();
     });
@@ -1012,10 +967,17 @@ function attachAdminHandlers(){
       const box = document.getElementById("adminMsgBox");
       const text = box.value.trim();
       if(!text) return;
-      const msgs = state.selectedStudentMessages || [];
-      msgs.push({ text, date: new Date().toLocaleString('es-MX'), from: state.currentUser.username });
-      await sSet("messages:"+state.selectedStudent, msgs);
-      state.selectedStudentMessages = msgs;
+      sendBtn.disabled = true;
+      const { data, error } = await sb.from('messages').insert({
+        student_id: state.selectedStudent, sender_id: state.currentUser.id, body: text
+      }).select().single();
+      if(error){
+        alert("Error al enviar el mensaje: " + error.message);
+        sendBtn.disabled = false;
+        return;
+      }
+      state.selectedStudentMessages = state.selectedStudentMessages || [];
+      state.selectedStudentMessages.push({ text: data.body, date: new Date(data.created_at).toLocaleString('es-MX') });
       state.saveNote = "Mensaje enviado.";
       render();
     });
@@ -1032,22 +994,45 @@ function escapeHtml(str){
 
 /* ============================= INIT ============================= */
 (async function init(){
+  const app = document.getElementById("app");
+  if(!sb){
+    app.innerHTML = `<div style="max-width:620px;margin:80px auto;font-family:'IBM Plex Mono',monospace;padding:24px;border:1px solid #F2B84B;color:#EDEFF7;">
+      <h2 style="color:#F2B84B;margin-top:0;">Configura Supabase</h2>
+      <p>Antes de usar la app, abre este archivo y reemplaza <code>SUPABASE_URL</code> y <code>SUPABASE_ANON_KEY</code> al inicio del &lt;script&gt; con los valores de tu proyecto (Project Settings → API en tu panel de Supabase).</p>
+    </div>`;
+    return;
+  }
   try{
+    await loadCurriculum();
     await ensureAdmin();
+    const { data: sessionData } = await sb.auth.getSession();
+    if(sessionData.session){
+      const uid = sessionData.session.user.id;
+      const { data: profile } = await sb.from('profiles').select('*').eq('id', uid).single();
+      if(profile){
+        state.currentUser = { id: profile.id, username: profile.username, name: profile.full_name, role: profile.role };
+        if(profile.role === 'admin'){
+          await loadAdminData();
+          state.screen = 'admin';
+        } else {
+          await loadStudentData();
+          state.screen = 'student';
+        }
+      }
+    }
     await render();
   }catch(err){
-    document.getElementById("app").innerHTML =
+    app.innerHTML =
       '<div style="max-width:520px;margin:60px auto;font-family:IBM Plex Mono,monospace;color:#E5646E;padding:20px;border:1px solid #E5646E;">'+
       '<h2 style="margin-top:0;">Error al iniciar la app</h2>'+
       '<p style="color:#EDEFF7;">'+escapeHtml(err && err.message ? err.message : String(err))+'</p>'+
-      '<p style="color:#98A2C7;">Recarga la página. Si el problema sigue, avísale al profesor con este mensaje.</p>'+
+      '<p style="color:#98A2C7;">Recarga la página. Si el problema sigue, verifica que el script SQL se haya ejecutado correctamente y que las credenciales de Supabase sean correctas.</p>'+
       '</div>';
   }
 })();
 window.addEventListener("error", function(e){
   console.error("Error no capturado:", e.error || e.message);
 });
-
 </script>
 </body>
 </html>
